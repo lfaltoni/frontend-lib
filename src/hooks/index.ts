@@ -12,3 +12,5 @@ export * from './media';
 export * from './messaging';
 export * from './phone-verification/usePhoneVerification';
 export * from './content';
+export * from './notifications';
+export * from './feature-flags/useFeatureFlags';

@@ -12,3 +12,5 @@ export * from './favorites';
 export * from './messaging';
 export * from './phoneVerification';
 export * from './content';
+export * from './notifications';
+export * from './featureFlag';
