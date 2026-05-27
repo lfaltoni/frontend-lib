@@ -24,6 +24,7 @@ export interface UseNotificationsReturn {
   setPage: (page: number) => void;
   refetch: () => Promise<void>;
   markAsRead: (notificationId: string) => Promise<void>;
+  markAsUnread: (notificationId: string) => Promise<void>;
   markAllAsRead: (category?: string) => Promise<void>;
   deleteNotification: (notificationId: string) => Promise<void>;
   deleteAllRead: () => Promise<void>;
@@ -74,6 +75,18 @@ export const useNotifications = (perPage = 20): UseNotificationsReturn => {
     }
   }, []);
 
+  const markAsUnread = useCallback(async (notificationId: string): Promise<void> => {
+    try {
+      const updated = await notificationsApi.markAsUnread(notificationId);
+      setNotifications((prev) =>
+        prev.map((n) => (n.notification_id === notificationId ? updated : n)),
+      );
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Failed to mark as unread';
+      setError(msg);
+    }
+  }, []);
+
   const markAllAsRead = useCallback(async (category?: string): Promise<void> => {
     try {
       await notificationsApi.markAllAsRead({ category });
@@ -116,6 +129,7 @@ export const useNotifications = (perPage = 20): UseNotificationsReturn => {
     setPage,
     refetch: fetchNotifications,
     markAsRead,
+    markAsUnread,
     markAllAsRead,
     deleteNotification,
     deleteAllRead,
