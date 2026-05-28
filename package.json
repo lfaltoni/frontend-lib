@@ -44,14 +44,20 @@
     "dev": "tsc --watch",
     "clean": "rm -rf dist"
   },
-  "keywords": ["react", "frontend", "foundation-sdk", "auth"],
+  "keywords": [
+    "react",
+    "frontend",
+    "foundation-sdk",
+    "auth"
+  ],
   "author": "",
   "license": "MIT",
   "devDependencies": {
     "@tanstack/react-table": "^8.21.3",
+    "@types/node": "^20.9.2",
     "@types/nodemailer": "^7.0.10",
     "@types/react": "^19.2.7",
-    "@types/node": "^20.9.2",
+    "@types/react-dom": "^19.2.3",
     "typescript": "^5.2.2"
   },
   "dependencies": {
@@ -59,12 +65,16 @@
   },
   "peerDependencies": {
     "@tanstack/react-table": ">=8.0.0",
-    "react": "^19.2.3",
-    "nodemailer": ">=6.0.0"
+    "nodemailer": ">=6.0.0",
+    "react": "^19.2.3"
   },
   "peerDependenciesMeta": {
-    "@tanstack/react-table": { "optional": true },
-    "nodemailer": { "optional": true }
+    "@tanstack/react-table": {
+      "optional": true
+    },
+    "nodemailer": {
+      "optional": true
+    }
   },
   "files": [
     "dist",

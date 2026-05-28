@@ -131,6 +131,28 @@ Domain API modules:
 | `seo.ts` | `generateOrganizationJsonLd()`, `generateBreadcrumbJsonLd()`, `generateArticleJsonLd()`, `generateFAQJsonLd()` | Schema.org JSON-LD generators (no framework dependency) |
 | `validation.ts` | `validateEmail()`, `normalizeEmail()`, `validatePhone()`, `normalizePhone()` | Email and phone validation/normalization — mirrors foundation-sdk backend logic |
 
+### Toast Notifications (`src/toast/`)
+
+React context-based toast notification system. Mirrors Bookease-pro's production toast tiers and timing (4 types, 3 severity tiers, hover-pause, dismissable). This is the first React component and context provider in fsdk-ts.
+
+| File | Key Exports | Purpose |
+|------|-------------|---------|
+| `types.ts` | `ToastType`, `ToastTier`, `ToastOptions`, `UseToastReturn` | Toast type definitions |
+| `ToastProvider.tsx` | `ToastProvider`, `showToast`, `showToastSuccess`, `showToastError`, `showToastWarning`, `showToastInfo` | Context provider + rendering + module-level access for API interceptors |
+| `useToast.ts` | `useToast()` | Hook returning `{ show, success, error, warning, info }` |
+| `index.ts` | barrel | Re-exports all public API |
+
+**Tier configuration:**
+
+| Type | Tier | Duration | Dismissable | Hover Pause |
+|------|------|----------|-------------|-------------|
+| error | critical | 15s | yes | yes |
+| success | standard | 8s | yes | yes |
+| warning | standard | 10s | yes | yes |
+| info | transient | 5s | no | no |
+
+**Consumer setup:** Wrap app root with `<ToastProvider>`, use `useToast()` in components, use `showToast()` / `showToastError()` etc. from API interceptors (non-component code). Override styling via CSS custom properties (`--fsdk-toast-success-color`, `--fsdk-toast-radius`, etc.).
+
 ### Server Modules (`src/server/`)
 
 Server-only code, never bundled into client builds:
