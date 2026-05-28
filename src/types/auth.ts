@@ -22,7 +22,9 @@ export interface PublicProfile {
   profile_data: Record<string, any>;
 }
 
-export interface AuthResponse {
+import type { ResponseEnvelope } from './api';
+
+export interface AuthResponse extends ResponseEnvelope {
   success: boolean;
   user?: User;
   token?: string;
