@@ -118,6 +118,7 @@ Domain API modules:
 | `invite.ts` | `PlatformInvite`, `InviteListResponse`, `InviteValidateResponse`, `InviteCreateRequest` | foundation-sdk `invites` domain |
 | `admin.ts` | `AdminUser`, `AdminUserDetail`, `AdminUserListResponse`, `AdminUserListParams` | foundation-sdk `admin` domain |
 | `content.ts` | `PipelineRuleType`, `FrequencyCapScope`, `ContentPipelineRule`, `CreatePipelineRuleRequest`, `UpdatePipelineRuleRequest`, `TestPipelineRuleParams`, `TestPipelineRuleResponse`, `ContentStats`, `KnownSender`, `ContentSendersResponse` | foundation-sdk `content` domain |
+| `validation.ts` | `ValidationResult` | foundation-sdk `email/validation.py` + `phone_verification/service.py` |
 
 ### Utilities (`src/utils/`)
 
@@ -128,6 +129,7 @@ Domain API modules:
 | `env.ts` | `getEnvConfig()`, `envConfig` | Base URLs for API and Foundation backends (configurable via window globals or env vars) |
 | `pagination.ts` | `computePaginationPages()`, `computeTotalPages()` | Pagination UI logic (page numbers with gaps) |
 | `seo.ts` | `generateOrganizationJsonLd()`, `generateBreadcrumbJsonLd()`, `generateArticleJsonLd()`, `generateFAQJsonLd()` | Schema.org JSON-LD generators (no framework dependency) |
+| `validation.ts` | `validateEmail()`, `normalizeEmail()`, `validatePhone()`, `normalizePhone()` | Email and phone validation/normalization — mirrors foundation-sdk backend logic |
 
 ### Server Modules (`src/server/`)
 
