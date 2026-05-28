@@ -1,6 +1,7 @@
 import { getLogger } from '../utils/logging';
 import { envConfig } from '../utils/env';
 import { storage } from '../utils/storage';
+import { surfaceToast } from './response-toast';
 
 const logger = getLogger('api-client');
 
@@ -153,9 +154,11 @@ export async function apiRequest<T>(
         const retryData = await retryResponse.json();
 
         if (!retryResponse.ok) {
+          surfaceToast(retryData);
           const msg = retryData.message || retryData.error || `HTTP error! status: ${retryResponse.status}`;
           throw new ApiError(msg, retryResponse.status, retryData);
         }
+        surfaceToast(retryData);
         return retryData;
       }
 
@@ -164,9 +167,11 @@ export async function apiRequest<T>(
         ? extractValidationMessage(data)
         : data.message || data.error || `HTTP error! status: ${response.status}`;
 
+      surfaceToast(data);
       throw new ApiError(message, response.status, data);
     }
 
+    surfaceToast(data);
     return data;
   };
 

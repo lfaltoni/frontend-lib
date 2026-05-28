@@ -1,6 +1,7 @@
 import { getLogger } from '../utils/logging';
 import { envConfig } from '../utils/env';
 import { storage } from '../utils/storage';
+import { surfaceToast } from './response-toast';
 
 const logger = getLogger('foundation-client');
 
@@ -42,9 +43,11 @@ export async function foundationRequest<T>(
     logger.logApiResponse(response.status, data, duration);
 
     if (!response.ok) {
+      surfaceToast(data);
       throw new Error(data.message || data.error || `HTTP error! status: ${response.status}`);
     }
 
+    surfaceToast(data);
     return data;
   } catch (error) {
     const duration = Date.now() - startTime;
