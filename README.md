@@ -59,6 +59,35 @@ function App() {
 }
 ```
 
+`useAuth` is backed by a single module-level reactive store (`authStore`), so
+**every** call site shares one source of truth. A `401` from either HTTP client
+(on any non-`/api/auth/` endpoint) clears the session and notifies all
+consumers — so disabling/force-logging-out an account de-authenticates the UI
+everywhere, with no per-component wiring and no provider to mount.
+
+#### Protecting routes (`useRequireAuth`)
+
+Guard authenticated-only routes. It redirects **once** auth resolves to
+unauthenticated (never during the optimistic first paint, so valid users aren't
+flashed to login), and returns `{ isAuthenticated, isLoading }` so you can render
+a loader instead of protected content while revalidating:
+
+```typescript
+import { useRequireAuth } from 'fsdk-ts';
+import { useRouter } from 'next/navigation';
+
+function AccountGuard({ children }: { children: React.ReactNode }) {
+  const router = useRouter();
+  // Omit onUnauthenticated to default to a full-page redirect to envConfig.loginPath.
+  const { isAuthenticated, isLoading } = useRequireAuth({
+    onUnauthenticated: () => router.push('/login'),
+  });
+
+  if (isLoading || !isAuthenticated) return <div>Loading…</div>;
+  return <>{children}</>;
+}
+```
+
 ### API Calls
 
 ```typescript

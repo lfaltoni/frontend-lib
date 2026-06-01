@@ -60,10 +60,14 @@ Two base HTTP clients that all API modules build on:
 
 | Client | File | Purpose | Auth |
 |--------|------|---------|------|
-| `apiRequest` | `client.ts` | Requests to the consumer app's backend | CSRF token (auto-fetched) |
-| `foundationRequest` | `foundation-client.ts` | Requests to foundation-sdk's backend | `credentials: 'include'` (cookies) + JWT Bearer if token exists in localStorage |
+| `apiRequest` | `client.ts` | Requests to the consumer app's backend (`:5000`) | CSRF token (auto-fetched) |
+| `foundationRequest` | `foundation-client.ts` | Requests to foundation-sdk's backend (`:5001`) | `credentials: 'include'` (cookies) + JWT Bearer if token exists in localStorage |
 
 Both read their base URLs from `utils/env.ts` (configurable via `window.__API_URL__` / `window.__FOUNDATION_URL__` or env vars).
+
+**401 de-auth funnel.** Both base clients call `authStore.deauth()` (see below) when a response is `401` for any endpoint whose path does **not** start with `/api/auth/`. The `/api/auth/*` exclusion is deliberate: those endpoints legitimately 401 on bad credentials (e.g. a wrong-password typo) and must not wipe an existing session. This single funnel enforces account-disable / force-logout: the backend re-checks `active` per request, so a disabled user's JWT yields 401 on any protected endpoint → `deauth()` clears the stale session and notifies every `useAuth` instance → `useRequireAuth` redirects to login. The clients **only clear state**; they never navigate (navigation is owned by `useRequireAuth`, so a full-page `window.location.assign` does not fight the client-side router).
+
+> **Caveat:** `apiRequest` (`:5000`, the consumer backend) now de-auths on **any** non-`/api/auth/` 401, not just foundation-auth failures. A consumer-backend endpoint that returns 401 for a non-session reason (e.g. a resource-level permission denial) will also force a global logout. Consumer backends should return 403 (not 401) for authorization failures that should not end the session.
 
 Domain API modules:
 
@@ -82,11 +86,31 @@ Domain API modules:
 
 `billingApi` is special — it uses `initBillingApi(requestFn, urlPrefix)` so the consumer can configure which HTTP client and URL prefix to use. This is the pattern to follow for any module that might talk to different backends in different products.
 
+#### Auth store (`auth-store.ts`)
+
+| Module | File | Purpose |
+|--------|------|---------|
+| `authStore` | `auth-store.ts` | Module-level subscribable singleton — the **single reactive source of truth for auth state** across the app |
+
+`authStore` holds `{ user, authResolved }` and is exposed to React via `useSyncExternalStore` (consumed by `useAuth`), **not** a React Context provider — so every call site observes the same state with no provider wiring. It imports only `storage`, `logging`, and the `User` type; it **must not** import the HTTP clients or `profileApi` (the clients import the store to funnel 401s, so importing them back would create a cycle — backend revalidation lives in the hook layer, not here).
+
+| Method | Purpose |
+|--------|---------|
+| `getSnapshot()` | Current client snapshot (stable identity until a real change) |
+| `getServerSnapshot()` | Constant frozen `{ user: null, authResolved: false }` for SSR — same object identity every call so `useSyncExternalStore` never loops |
+| `subscribe(listener)` | Register a listener; returns an unsubscribe fn |
+| `setUser(user)` | Authenticate / refresh the current user (does not touch `authResolved`) |
+| `deauth()` | Force logout: clear stored user + JWT, set `user: null`, mark resolved, notify. Called by both HTTP clients on a protected-endpoint 401 and by `useAuth.logout()` |
+| `markResolved()` | Mark auth state as definitively settled (revalidation finished) |
+
+The initial client snapshot is seeded synchronously from `localStorage` (`authResolved: false`) so the first render already knows the optimistic auth state and guards don't flicker. `authResolved` flips `true` only after backend revalidation settles; until then `user` is the optimistic seed and must **not** be trusted to mean "definitively unauthenticated".
+
 ### React Hooks (`src/hooks/`)
 
 | Hook | File | Purpose |
 |------|------|---------|
-| `useAuth()` | `auth/useAuth.ts` | Auth state: `user`, `isAuthenticated`, `login()`, `logout()`, `refreshUser()` |
+| `useAuth()` | `auth/useAuth.ts` | Auth state: `user`, `isLoading`, `error`, `isAuthenticated`, `authResolved`, `login()`, `logout()`, `refreshUser()`, `clearError()`. Thin `useSyncExternalStore` wrapper over `authStore`; revalidates via `profileApi.getProfile` on mount + window-focus + visibilitychange (deduped by a module-level in-flight promise) |
+| `useRequireAuth()` | `auth/useRequireAuth.ts` | Route guard: redirects to `envConfig.loginPath` (or calls `onUnauthenticated`) **once** auth resolves to unauthenticated; never fires during the optimistic phase. Returns `{ isAuthenticated, isLoading }` |
 | `useLogin()` | `auth/useLogin.ts` | Login form: `login()`, `register()`, `isLoading`, `error` |
 | `useRegister()` | `auth/useRegister.ts` | Registration form (delegates to `useLogin`) |
 | `useGoogleLogin()` | `auth/useGoogleLogin.ts` | Google Identity Services: `googleLogin(credential)` |
@@ -218,6 +242,7 @@ Logs are stored in localStorage and can be exported via `window.getFrontendLogs(
 |----------|---------|---------|
 | `NEXT_PUBLIC_API_URL` or `window.__API_URL__` | `http://localhost:5000` | Consumer app backend (used by `apiRequest`) |
 | `NEXT_PUBLIC_FOUNDATION_URL` or `window.__FOUNDATION_URL__` | `http://localhost:5001` | Foundation SDK backend (used by `foundationRequest`) |
+| `window.__LOGIN_PATH__` | `/login` | Route the app is sent to after a forced (401) logout — used by `useRequireAuth`'s default redirect. Override if login is mounted at a non-default path |
 
 Defaults are dev-mode convenience values. Consumer apps override these via environment variables or window globals.
 
@@ -225,9 +250,32 @@ Defaults are dev-mode convenience values. Consumer apps override these via envir
 
 Architectural patterns that consumer apps need to be aware of when integrating fsdk-ts with a foundation-sdk backend.
 
-### Auth State Initialization
+### Auth State: Shared Store, No Provider
 
-`useAuth()` synchronously reads the user from localStorage on first render. This means auth guards (`if (!isAuthenticated) redirect`) work correctly without race conditions. If you see flash-redirects after login, verify that `storage.setUser()` is called before navigation and that `useAuth` is using the synchronous `getInitialUser` pattern (not a useEffect-only approach).
+Auth state lives in a module-level singleton (`authStore`, `src/api/auth-store.ts`) exposed to React via `useSyncExternalStore`. **There is no Context provider to mount** — every `useAuth()` call site observes the exact same state, so components can never disagree about whether the user is authenticated. `login`/`logout`/`refreshUser` mutate the shared store; an HTTP-client 401 de-auths it (see the 401 de-auth funnel under API Clients).
+
+The store seeds `user` synchronously from localStorage on first render (optimistic), then revalidates against the backend (`profileApi.getProfile`) on mount and on window focus / visibility change, deduped to at most one in-flight request. The `authResolved` flag is `false` until that revalidation settles.
+
+**Two-flag contract for guards:**
+- `authResolved === false` → still resolving; treat as **loading**, render a loader, do **not** redirect. `user` is only the optimistic seed and must not be read as "definitively unauthenticated".
+- `authResolved === true && !isAuthenticated` → definitively logged out; safe to redirect.
+
+**Protecting routes:** wrap protected pages/layouts with a guard that calls `useRequireAuth()`. It gates the redirect on `authResolved` (never kicks a valid user on first paint, never acts during the optimistic phase) and fires the redirect at most once. By default it does a full-page `window.location.assign(envConfig.loginPath)`; pass `onUnauthenticated` to use client-side navigation (e.g. Next.js `router.push`) instead:
+
+```tsx
+function ProtectedLayout({ children }) {
+  const router = useRouter();
+  const { isLoading } = useRequireAuth({ onUnauthenticated: () => router.push('/login') });
+  if (isLoading) return <Spinner />;        // authResolved === false
+  return children;                          // resolved + authenticated
+}
+```
+
+If you see flash-redirects after login, verify that `login()` is called (which sets the store and marks it resolved) before navigation, and that the guard reads `authResolved` rather than acting on the optimistic `user` value.
+
+### SSR / getServerSnapshot
+
+`authStore.getServerSnapshot()` returns a frozen, constant `{ user: null, authResolved: false }`. On the server every user renders as unresolved-and-unauthenticated, which keeps server and first client render consistent (no hydration mismatch) and means `useRequireAuth` reports `isLoading` (not "unauthenticated") on the server — protected content stays gated until the client resolves auth. Because the object identity is constant, `useSyncExternalStore` never enters an infinite loop during SSR.
 
 ### JWT Bearer Auth vs Flask-Login Sessions
 
