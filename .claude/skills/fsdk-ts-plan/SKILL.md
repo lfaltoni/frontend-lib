@@ -226,6 +226,10 @@ Answer these questions:
 
 **Output for plan:** Verification commands to run after implementation.
 
+### 3H. Enforcement Completeness audit (state-gating features)
+
+**Enforcement Completeness (state-gating features).** When a feature gates access or capability on STATE — account active/disabled, tenant/org active/suspended, force-logout/session-revocation, role/permission, subscription tier, ownership — **Discovery ≠ Enforcement.** Hiding a resource from listings/search/dashboards does NOT enforce the gate. Enumerate EVERY entry point that reads OR mutates the gated resource or performs the gated action — listing/search endpoints AND detail/by-id/by-handle/by-slug lookups; create/reserve/mutate/delete/action endpoints (the ones that *do* the thing); direct-link/direct-id paths that bypass discovery; every auth channel (session cookie AND JWT/bearer, same- AND cross-origin); cross-domain/cross-service consumers resolving the resource via a different code path; admin/webhook/scheduler paths — and prove each independently enforces the gate. Produce an **enforcement matrix** (entry point × gated? × where) and write **negative requirements + negative tests** ("a disabled/suspended/unauthorized subject MUST NOT be able to <action> via ANY path"), not only positive behavior tests — positive tests are structurally blind to a missing enforcement point.
+
 ## Phase 4: Emergent Concern Check
 
 Before writing the plan, ask yourself:
