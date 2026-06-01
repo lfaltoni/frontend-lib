@@ -1,6 +1,7 @@
 import { getLogger } from '../utils/logging';
 import { envConfig } from '../utils/env';
 import { storage } from '../utils/storage';
+import { authStore } from './auth-store';
 import { surfaceToast } from './response-toast';
 
 const logger = getLogger('api-client');
@@ -97,6 +98,17 @@ function isCsrfError(status: number, data: Record<string, unknown>): boolean {
   return status === 400 && String(data.type || '').includes('CSRF');
 }
 
+/**
+ * Funnel a 401 into the single reactive auth store so the whole app de-auths
+ * consistently. Skip the foundation auth endpoints (/api/auth/*): those
+ * legitimately 401 on bad credentials and must not wipe an existing session.
+ */
+function maybeDeauth(status: number, endpoint: string): void {
+  if (status === 401 && !endpoint.startsWith('/api/auth/')) {
+    authStore.deauth();
+  }
+}
+
 // ---------------------------------------------------------------------------
 // Core API request
 // ---------------------------------------------------------------------------
@@ -154,6 +166,7 @@ export async function apiRequest<T>(
         const retryData = await retryResponse.json();
 
         if (!retryResponse.ok) {
+          maybeDeauth(retryResponse.status, endpoint);
           surfaceToast(retryData);
           const msg = retryData.message || retryData.error || `HTTP error! status: ${retryResponse.status}`;
           throw new ApiError(msg, retryResponse.status, retryData);
@@ -161,6 +174,8 @@ export async function apiRequest<T>(
         surfaceToast(retryData);
         return retryData;
       }
+
+      maybeDeauth(response.status, endpoint);
 
       // 422: Flask-Smorest validation errors have { errors: { json: { field: [...] } } }
       const message = response.status === 422 && data.errors

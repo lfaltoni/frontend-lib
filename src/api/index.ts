@@ -1,4 +1,5 @@
 export * from './auth';
+export * from './auth-store';
 export * from './client';
 export * from './foundation-client';
 export * from './profile';
