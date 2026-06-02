@@ -15,4 +15,5 @@ export * from './content';
 export * from './notifications';
 export * from './featureFlag';
 export * from './webhook';
+export * from './session';
 export * from './validation';

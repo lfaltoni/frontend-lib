@@ -83,6 +83,7 @@ Domain API modules:
 | `invitesApi` | `invites.ts` | `foundationRequest` | `/api/admin/invites/*` + `/api/invites/*` (CRUD, validate, consume) |
 | `adminApi` | `admin.ts` | `foundationRequest` | `/api/admin/users/*` (list, detail, status, resend MFA) |
 | `contentPipelineApi` | `content.ts` | `foundationRequest` | `/api/content/*` (pipeline rules CRUD, toggle, test, stats, sources, senders) |
+| `sessionsApi` | `sessions.ts` | `foundationRequest` | `/api/sessions/*` (list, revoke one, revoke-all / log out everywhere) |
 
 `billingApi` is special — it uses `initBillingApi(requestFn, urlPrefix)` so the consumer can configure which HTTP client and URL prefix to use. This is the pattern to follow for any module that might talk to different backends in different products.
 
@@ -126,6 +127,7 @@ The initial client snapshot is seeded synchronously from `localStorage` (`authRe
 | `useInvites()` | `invites/useInvites.ts` | Platform invite management: `create()`, `listAll()`, `listPending()`, `revoke()`, `validate()`, `consume()`. Manual trigger. |
 | `useAdmin()` | `admin/useAdmin.ts` | Admin user management: `listUsers()`, `getUserDetail()`, `setAccountStatus()`, `resendMfa()`. Manual trigger. |
 | `useContentPipeline()` | `content/useContentPipeline.ts` | Content pipeline rule management: `listRules()`, `createRule()`, `updateRule()`, `deleteRule()`, `toggleRule()`, `testRules()`, `getStats()`, `getSources()`, `getSenders()`. Manual trigger. |
+| `useSessions()` | `sessions/useSessions.ts` | Active session / device management: `sessions`, `isLoading`, `error`, `clearError()`, `refresh()`, `revoke(sid)`, `revokeAll(req?)`. Auto-fetches on mount; refetches after revoke / revokeAll. |
 
 ### Type Definitions (`src/types/`)
 
@@ -143,6 +145,7 @@ The initial client snapshot is seeded synchronously from `localStorage` (`authRe
 | `admin.ts` | `AdminUser`, `AdminUserDetail`, `AdminUserListResponse`, `AdminUserListParams` | foundation-sdk `admin` domain |
 | `content.ts` | `PipelineRuleType`, `FrequencyCapScope`, `ContentPipelineRule`, `CreatePipelineRuleRequest`, `UpdatePipelineRuleRequest`, `TestPipelineRuleParams`, `TestPipelineRuleResponse`, `ContentStats`, `KnownSender`, `ContentSendersResponse` | foundation-sdk `content` domain |
 | `validation.ts` | `ValidationResult` | foundation-sdk `email/validation.py` + `phone_verification/service.py` |
+| `session.ts` | `Session`, `SessionListResponse`, `RevokeAllRequest`, `SessionMessageResponse` | foundation-sdk `sessions` domain |
 
 ### Utilities (`src/utils/`)
 
