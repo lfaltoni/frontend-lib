@@ -149,6 +149,7 @@ logger.error('Something went wrong', { details: 'error info' });
 
 - `useLogin()` - Login and registration functionality
 - `useAuth()` - Authentication state management
+- `useSessions()` - Active session / device management
 
 ### API Functions
 
@@ -156,6 +157,9 @@ logger.error('Something went wrong', { details: 'error info' });
 - `authApi.register(userData)` - Register new user
 - `authApi.logout()` - Logout current user
 - `authApi.getProfile()` - Get user profile
+- `sessionsApi.listSessions()` - List active sessions / devices
+- `sessionsApi.revokeSession(sid)` - Revoke a single session
+- `sessionsApi.revokeAllSessions(req?)` - Log out everywhere (keeps current device by default)
 
 ### Utilities
 
