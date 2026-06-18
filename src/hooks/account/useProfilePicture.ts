@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, ChangeEvent } from 'react';
-import { envConfig } from '../../utils/env';
+import { getEnvConfig } from '../../utils/env';
 
 export interface ProfilePictureResponse {
   url?: string;
@@ -22,7 +22,7 @@ export const useProfilePicture = (userId: string) => {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch(`${envConfig.foundationUrl}/media/profile-picture/${userId}`, {
+      const response = await fetch(`${getEnvConfig().foundationUrl}/media/profile-picture/${userId}`, {
         credentials: 'include'
       });
 
@@ -74,13 +74,13 @@ export const useProfilePicture = (userId: string) => {
       formData.append('file', file);
       formData.append('user_id', userId);
 
-      const response = await fetch(`${envConfig.foundationUrl}/media/upload/profile-picture`, {
+      const response = await fetch(`${getEnvConfig().foundationUrl}/media/upload/profile-picture`, {
         method: 'POST',
         body: formData,
         credentials: 'include'
       });
 
-      console.log('Upload URL:', `${envConfig.foundationUrl}/media/upload/profile-picture`);
+      console.log('Upload URL:', `${getEnvConfig().foundationUrl}/media/upload/profile-picture`);
       console.log('Upload response status:', response.status);
       console.log('Upload response ok:', response.ok);
 

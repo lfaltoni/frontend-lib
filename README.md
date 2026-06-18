@@ -78,7 +78,7 @@ import { useRouter } from 'next/navigation';
 
 function AccountGuard({ children }: { children: React.ReactNode }) {
   const router = useRouter();
-  // Omit onUnauthenticated to default to a full-page redirect to envConfig.loginPath.
+  // Omit onUnauthenticated to default to a full-page redirect to getEnvConfig().loginPath.
   const { isAuthenticated, isLoading } = useRequireAuth({
     onUnauthenticated: () => router.push('/login'),
   });

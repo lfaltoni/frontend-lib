@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react';
 import { useAuth } from './useAuth';
-import { envConfig } from '../../utils/env';
+import { getEnvConfig } from '../../utils/env';
 import { getLogger } from '../../utils/logging';
 
 const logger = getLogger('useRequireAuth');
@@ -64,7 +64,7 @@ export const useRequireAuth = (
     if (opts?.onUnauthenticated) {
       opts.onUnauthenticated();
     } else if (typeof window !== 'undefined') {
-      window.location.assign(envConfig.loginPath);
+      window.location.assign(getEnvConfig().loginPath);
     }
   }, [authResolved, isAuthenticated, opts]);
 

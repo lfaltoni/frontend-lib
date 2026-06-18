@@ -63,7 +63,7 @@ Two base HTTP clients that all API modules build on:
 | `apiRequest` | `client.ts` | Requests to the consumer app's backend (`:5000`) | CSRF token (auto-fetched) |
 | `foundationRequest` | `foundation-client.ts` | Requests to foundation-sdk's backend (`:5001`) | `credentials: 'include'` (cookies) + JWT Bearer if token exists in localStorage |
 
-Both read their base URLs from `utils/env.ts` (configurable via `window.__API_URL__` / `window.__FOUNDATION_URL__` or env vars).
+Both read their base URLs live from `getEnvConfig()` (`utils/env.ts`) at call time. fsdk-ts reads no env vars and holds no defaults — the consumer app injects config once at entry via `initEnv()` (see Environment Configuration).
 
 **401 de-auth funnel.** Both base clients call `authStore.deauth()` (see below) when a response is `401` for any endpoint whose path does **not** start with `/api/auth/`. The `/api/auth/*` exclusion is deliberate: those endpoints legitimately 401 on bad credentials (e.g. a wrong-password typo) and must not wipe an existing session. This single funnel enforces account-disable / force-logout: the backend re-checks `active` per request, so a disabled user's JWT yields 401 on any protected endpoint → `deauth()` clears the stale session and notifies every `useAuth` instance → `useRequireAuth` redirects to login. The clients **only clear state**; they never navigate (navigation is owned by `useRequireAuth`, so a full-page `window.location.assign` does not fight the client-side router).
 
@@ -111,7 +111,7 @@ The initial client snapshot is seeded synchronously from `localStorage` (`authRe
 | Hook | File | Purpose |
 |------|------|---------|
 | `useAuth()` | `auth/useAuth.ts` | Auth state: `user`, `isLoading`, `error`, `isAuthenticated`, `authResolved`, `login()`, `logout()`, `refreshUser()`, `clearError()`. Thin `useSyncExternalStore` wrapper over `authStore`; revalidates via `profileApi.getProfile` on mount + window-focus + visibilitychange (deduped by a module-level in-flight promise) |
-| `useRequireAuth()` | `auth/useRequireAuth.ts` | Route guard: redirects to `envConfig.loginPath` (or calls `onUnauthenticated`) **once** auth resolves to unauthenticated; never fires during the optimistic phase. Returns `{ isAuthenticated, isLoading }` |
+| `useRequireAuth()` | `auth/useRequireAuth.ts` | Route guard: redirects to `getEnvConfig().loginPath` (or calls `onUnauthenticated`) **once** auth resolves to unauthenticated; never fires during the optimistic phase. Returns `{ isAuthenticated, isLoading }` |
 | `useLogin()` | `auth/useLogin.ts` | Login form: `login()`, `register()`, `isLoading`, `error` |
 | `useRegister()` | `auth/useRegister.ts` | Registration form (delegates to `useLogin`) |
 | `useGoogleLogin()` | `auth/useGoogleLogin.ts` | Google Identity Services: `googleLogin(credential)` |
@@ -153,7 +153,7 @@ The initial client snapshot is seeded synchronously from `localStorage` (`authRe
 |------|-------------|---------|
 | `logging.ts` | `getLogger(context)`, `FrontendLogger` | Structured logging with levels, localStorage export, `window.getFrontendLogs()` |
 | `storage.ts` | `storage` object | User + JWT token persistence in localStorage |
-| `env.ts` | `getEnvConfig()`, `envConfig` | Base URLs for API and Foundation backends (configurable via window globals or env vars) |
+| `env.ts` | `initEnv(cfg)`, `getEnvConfig()`, `EnvConfig` | Holds the consumer-injected config (`apiUrl`, `foundationUrl`, `loginPath`). `initEnv()` is called once at app entry; readers call `getEnvConfig()` live. fsdk-ts reads no env vars and holds no product defaults |
 | `pagination.ts` | `computePaginationPages()`, `computeTotalPages()` | Pagination UI logic (page numbers with gaps) |
 | `seo.ts` | `generateOrganizationJsonLd()`, `generateBreadcrumbJsonLd()`, `generateArticleJsonLd()`, `generateFAQJsonLd()` | Schema.org JSON-LD generators (no framework dependency) |
 | `validation.ts` | `validateEmail()`, `normalizeEmail()`, `validatePhone()`, `normalizePhone()` | Email and phone validation/normalization — mirrors foundation-sdk backend logic |
@@ -241,13 +241,28 @@ Logs are stored in localStorage and can be exported via `window.getFrontendLogs(
 
 ## Environment Configuration
 
-| Variable | Default | Purpose |
-|----------|---------|---------|
-| `NEXT_PUBLIC_API_URL` or `window.__API_URL__` | `http://localhost:5000` | Consumer app backend (used by `apiRequest`) |
-| `NEXT_PUBLIC_FOUNDATION_URL` or `window.__FOUNDATION_URL__` | `http://localhost:5001` | Foundation SDK backend (used by `foundationRequest`) |
-| `window.__LOGIN_PATH__` | `/login` | Route the app is sent to after a forced (401) logout — used by `useRequireAuth`'s default redirect. Override if login is mounted at a non-default path |
+fsdk-ts reads **no environment variables** and holds **no product-specific defaults**. The consumer app reads its own env (Next.js `NEXT_PUBLIC_*` vars, etc.) and **injects** the config once at app entry by calling `initEnv()` — mirroring the `initBillingApi()` pattern. Readers (HTTP clients, hooks) call `getEnvConfig()` live at use time rather than snapshotting at module load.
 
-Defaults are dev-mode convenience values. Consumer apps override these via environment variables or window globals.
+```typescript
+import { initEnv } from 'fsdk-ts';
+
+// Once, at app entry (e.g. a top-level client component / provider):
+initEnv({
+  apiUrl: process.env.NEXT_PUBLIC_API_URL!,           // consumer app backend (apiRequest)
+  foundationUrl: process.env.NEXT_PUBLIC_FOUNDATION_URL!, // foundation-sdk backend (foundationRequest)
+  loginPath: '/login',                                 // forced-logout (401) redirect target
+});
+```
+
+`EnvConfig` fields:
+
+| Field | Purpose |
+|-------|---------|
+| `apiUrl` | Consumer app backend base URL (used by `apiRequest`) |
+| `foundationUrl` | Foundation SDK backend base URL (used by `foundationRequest`) |
+| `loginPath` | Route the app is sent to after a forced (401) logout — used by `useRequireAuth`'s default redirect. Set if login is mounted at a non-default path |
+
+`initEnv(cfg)` accepts a `Partial<EnvConfig>` and merges over the current config. Any field not injected by the consumer falls back to the library's empty/neutral baseline (`apiUrl`/`foundationUrl` default to `''`; `loginPath` defaults to `/login`).
 
 ## Consumer Integration Notes
 
@@ -263,7 +278,7 @@ The store seeds `user` synchronously from localStorage on first render (optimist
 - `authResolved === false` → still resolving; treat as **loading**, render a loader, do **not** redirect. `user` is only the optimistic seed and must not be read as "definitively unauthenticated".
 - `authResolved === true && !isAuthenticated` → definitively logged out; safe to redirect.
 
-**Protecting routes:** wrap protected pages/layouts with a guard that calls `useRequireAuth()`. It gates the redirect on `authResolved` (never kicks a valid user on first paint, never acts during the optimistic phase) and fires the redirect at most once. By default it does a full-page `window.location.assign(envConfig.loginPath)`; pass `onUnauthenticated` to use client-side navigation (e.g. Next.js `router.push`) instead:
+**Protecting routes:** wrap protected pages/layouts with a guard that calls `useRequireAuth()`. It gates the redirect on `authResolved` (never kicks a valid user on first paint, never acts during the optimistic phase) and fires the redirect at most once. By default it does a full-page `window.location.assign(getEnvConfig().loginPath)`; pass `onUnauthenticated` to use client-side navigation (e.g. Next.js `router.push`) instead:
 
 ```tsx
 function ProtectedLayout({ children }) {

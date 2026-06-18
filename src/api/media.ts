@@ -1,16 +1,14 @@
 import type { MediaItem, MediaUploadResponse } from '../types/media';
-import { envConfig } from '../utils/env';
+import { getEnvConfig } from '../utils/env';
 import { getLogger } from '../utils/logging';
 
 const logger = getLogger('media-api');
-
-const MEDIA_BASE_URL = envConfig.foundationUrl;
 
 async function mediaRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${MEDIA_BASE_URL}${endpoint}`;
+  const url = `${getEnvConfig().foundationUrl}${endpoint}`;
   const startTime = Date.now();
 
   logger.logApiRequest(options.method || 'GET', url, options.body);

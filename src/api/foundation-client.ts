@@ -1,12 +1,10 @@
 import { getLogger } from '../utils/logging';
-import { envConfig } from '../utils/env';
+import { getEnvConfig } from '../utils/env';
 import { storage } from '../utils/storage';
 import { authStore } from './auth-store';
 import { surfaceToast } from './response-toast';
 
 const logger = getLogger('foundation-client');
-
-export const FOUNDATION_URL = envConfig.foundationUrl;
 
 /**
  * Make a request to the Foundation SDK server (auth, profiles, media).
@@ -19,7 +17,7 @@ export async function foundationRequest<T>(
   endpoint: string,
   options: RequestInit = {}
 ): Promise<T> {
-  const url = `${FOUNDATION_URL}${endpoint}`;
+  const url = `${getEnvConfig().foundationUrl}${endpoint}`;
   const method = (options.method || 'GET').toUpperCase();
   const startTime = Date.now();
 

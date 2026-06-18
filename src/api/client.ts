@@ -1,5 +1,5 @@
 import { getLogger } from '../utils/logging';
-import { envConfig } from '../utils/env';
+import { getEnvConfig } from '../utils/env';
 import { storage } from '../utils/storage';
 import { authStore } from './auth-store';
 import { surfaceToast } from './response-toast';
@@ -44,8 +44,6 @@ function extractValidationMessage(data: Record<string, unknown>): string {
   return messages.join('. ') || 'Invalid input';
 }
 
-export const API_BASE_URL = envConfig.apiUrl;
-
 // ---------------------------------------------------------------------------
 // CSRF token management
 // ---------------------------------------------------------------------------
@@ -62,7 +60,7 @@ let _csrfFetchPromise: Promise<string> | null = null;
 const MUTATING_METHODS = new Set(['POST', 'PUT', 'PATCH', 'DELETE']);
 
 async function fetchCsrfToken(): Promise<string> {
-  const res = await fetch(`${API_BASE_URL}/api/v1/csrf-token`, {
+  const res = await fetch(`${getEnvConfig().apiUrl}/api/v1/csrf-token`, {
     credentials: 'include',
   });
   if (!res.ok) {
@@ -134,7 +132,7 @@ export async function apiRequest<T>(
   }
 
   const startTime = Date.now();
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${getEnvConfig().apiUrl}${endpoint}`;
 
   logger.logApiRequest(method, url, options.body);
 
