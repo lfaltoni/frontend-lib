@@ -27,11 +27,17 @@ git diff
 git status
 ```
 
-If everything is already committed, use the most recent commit(s):
+If everything is already committed, **derive the range — do NOT default to `HEAD~1`** (it only
+captures the LAST commit, so when several commits have landed since the docs were last updated it
+silently misses the earlier ones). No need to know or count how many commits there were:
 ```bash
-git log -1 --stat
-git diff HEAD~1
+# Diff EVERYTHING since the docs this skill maintains were last touched — all intervening commits, one pass:
+DOCS_LAST=$(git log -1 --format=%H -- ARCHITECTURE.md)   # the doc files this skill updates
+git diff "$DOCS_LAST"..HEAD --stat
+git diff "$DOCS_LAST"..HEAD
 ```
+Alternatives: a feature branch → `git diff main...HEAD`; a user-named base → `git diff <base>..HEAD`.
+Use `HEAD~1` ONLY for a known single-commit change; for brand-new docs (no prior commit), read the code as-is.
 
 From the diff, identify:
 - New or changed type files (`src/types/*.ts`)
