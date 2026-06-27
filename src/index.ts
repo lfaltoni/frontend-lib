@@ -7,3 +7,4 @@ export * from './hooks';
 export * from './utils';
 export * from './table';
 export * from './toast';
+export * from './dev';
