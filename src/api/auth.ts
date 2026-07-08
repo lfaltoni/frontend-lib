@@ -1,4 +1,4 @@
-import { LoginCredentials, RegisterData, User } from '../types/auth';
+import { LoginCredentials, MagicLinkRequestResult, RegisterData, User } from '../types/auth';
 import { getLogger } from '../utils/logging';
 import { foundationRequest } from './foundation-client';
 import { storage } from '../utils/storage';
@@ -124,6 +124,45 @@ export const authApi = {
     }
 
     logger.info('Google login successful', { userId: response.user.user_id });
+    return response.user;
+  },
+
+  requestMagicLink: async (email: string): Promise<MagicLinkRequestResult> => {
+    // Enumeration-safe: the backend always returns a generic success regardless
+    // of whether the email exists. The client does no special-casing. Mirrors
+    // requestPasswordReset (body-ful POST { email }, message envelope).
+    logger.info('Requesting magic link', { email });
+
+    const response = await foundationRequest<MagicLinkRequestResult>('/api/auth/magic/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+
+    logger.info('Magic link requested');
+    return response;
+  },
+
+  consumeMagicLink: async (token: string): Promise<User> => {
+    // Consume the one-time token from the emailed link. On success the backend
+    // returns the SAME LoginResponse envelope as /login (user, token, is_first_login)
+    // and sets the cookie session. Never log the raw token.
+    logger.info('Consuming magic link');
+
+    const response = await foundationRequest<AuthResponse<User>>('/api/auth/magic/consume', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+
+    if (!response.user) {
+      throw new Error('Invalid response: user data missing');
+    }
+
+    // Store JWT for cross-service auth (same handling as login/google).
+    if (response.token) {
+      storage.setToken(response.token);
+    }
+
+    logger.info('Magic link consumed', { userId: response.user.user_id });
     return response.user;
   },
 };

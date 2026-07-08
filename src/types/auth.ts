@@ -56,3 +56,23 @@ export interface AuthState {
   error: string | null;
   isAuthenticated: boolean;
 }
+
+// --- Magic-link (passwordless) login ---------------------------------------
+
+// Enumeration-safe request response: always a generic success, never reveals
+// whether the email exists. Same shape as requestPasswordReset's inline return.
+export interface MagicLinkRequestResult {
+  success: boolean;
+  message: string;
+}
+
+// Optional payload aliases (documentation + exportability). The api methods
+// take the primitive directly like their siblings; these exist so consumers
+// can type request/callback forms.
+export interface MagicLinkRequestPayload {
+  email: string;
+}
+
+export interface ConsumeMagicLinkPayload {
+  token: string;
+}
