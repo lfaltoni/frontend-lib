@@ -75,4 +75,21 @@ describe('useAuth mount revalidation: dedup + optimistic safety', () => {
     expect(result.current.isAuthenticated).toBe(true);
     expect(result.current.user?.user_id).toBe('u1');
   });
+
+  it('(f) toUser preserves email_verified across background revalidation', async () => {
+    // Regression guard: toUser hand-copies a whitelist; email_verified must be
+    // in it or it silently vanishes on the first revalidation.
+    getProfileMock.mockResolvedValueOnce({
+      user: { ...VALID_USER, email_verified: false },
+      profile_data: {},
+      slug: null,
+    });
+
+    const { result } = renderHook(() => useAuth());
+
+    await waitFor(() => {
+      expect(result.current.authResolved).toBe(true);
+    });
+    expect(result.current.user?.email_verified).toBe(false);
+  });
 });

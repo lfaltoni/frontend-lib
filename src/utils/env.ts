@@ -10,6 +10,9 @@ export interface EnvConfig {
   // Route the consumer app should be sent to after a forced (401) logout.
   // Configurable so apps that mount their login at a non-default path can override it.
   loginPath: string;
+  // Google OAuth client id. Set to enable "Continue with Google" (useGoogleSignIn);
+  // unset ⇒ the hook reports { available: false } and the consumer hides the button.
+  googleClientId?: string;
 }
 
 let _cfg: EnvConfig = { apiUrl: '', foundationUrl: '', loginPath: '/login' };

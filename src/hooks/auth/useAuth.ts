@@ -43,6 +43,9 @@ function toUser(fresh: User): User {
     last_name: fresh.last_name,
     registration_order: fresh.registration_order,
     platform_role: fresh.platform_role,
+    // Must be copied here or it silently disappears on the first background
+    // revalidation (this whitelist-copy runs on every revalidate + refreshUser).
+    email_verified: fresh.email_verified,
   };
 }
 

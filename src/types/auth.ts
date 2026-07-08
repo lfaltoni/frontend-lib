@@ -3,14 +3,20 @@
 export interface User {
   user_id: string;
   email: string;
-  first_name: string;
-  last_name: string;
+  // Optional: a name-less registration serializes these as null/absent
+  // (backend `UserResponseSchema` names are `allow_none`). Strings when present.
+  first_name?: string;
+  last_name?: string;
   username?: string;
   slug?: string | null;
   registration_order?: number;
   first_login_at?: string | null;
   last_seen_at?: string | null;
   platform_role?: string | null;
+  // Derived server-side from `confirmed_at is not None`. Optional so the lib
+  // stays backwards-compatible with a backend that has not shipped it yet:
+  // `undefined` ⇒ unknown ⇒ "don't nag" (see useEmailVerification).
+  email_verified?: boolean;
 }
 
 export interface PublicProfile {
@@ -38,8 +44,10 @@ export interface LoginCredentials {
 }
 
 export interface RegisterData extends LoginCredentials {
-  first_name: string;
-  last_name: string;
+  // Optional: names are no longer required at registration. Omitted keys are
+  // simply not sent (register() JSON.stringifies this object verbatim).
+  first_name?: string;
+  last_name?: string;
 }
 
 export interface AuthState {

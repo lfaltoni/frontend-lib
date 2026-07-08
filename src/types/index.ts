@@ -1,5 +1,6 @@
 export * from './api';
 export * from './auth';
+export * from './google';
 export * from './filters';
 export * from './media';
 export * from './review';

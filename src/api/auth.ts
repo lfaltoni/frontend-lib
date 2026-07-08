@@ -93,6 +93,20 @@ export const authApi = {
     return response;
   },
 
+  resendVerification: async (): Promise<{ success: boolean; message: string }> => {
+    // Login-gated + body-less: the cookie session / JWT identifies the current
+    // user, so no email is sent in the body. Mirrors the message-response shape
+    // of requestPasswordReset.
+    logger.info('Requesting verification email resend');
+
+    const response = await foundationRequest<{ success: boolean; message: string }>('/api/auth/resend-verification', {
+      method: 'POST',
+    });
+
+    logger.info('Verification email resend requested');
+    return response;
+  },
+
   googleLogin: async (credential: string): Promise<User> => {
     logger.info('Attempting Google login');
 
