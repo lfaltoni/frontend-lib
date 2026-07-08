@@ -6,3 +6,5 @@ export * from './usePasswordReset';
 export * from './useGoogleLogin';
 export * from './useEmailVerification';
 export * from './useGoogleSignIn';
+export * from './useMagicLink';
+export * from './useConsumeMagicLink';
