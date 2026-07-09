@@ -36,6 +36,9 @@ export interface AuthResponse extends ResponseEnvelope {
   token?: string;
   error?: string;
   message?: string;
+  // Set true only by the passwordless consume endpoint when the sign-in created
+  // a brand-new account. Absent/undefined ⇒ false for every other auth response.
+  is_new_user?: boolean;
 }
 
 export interface LoginCredentials {
@@ -75,4 +78,33 @@ export interface MagicLinkRequestPayload {
 
 export interface ConsumeMagicLinkPayload {
   token: string;
+}
+
+// --- Passwordless "consume-or-CREATE" sign-in / sign-up --------------------
+
+// Parallel to the magic-link types but for the passwordless flow, whose consume
+// step CREATES a brand-new account for an unknown email (email-first sign-up).
+
+// Enumeration-safe request response: always a generic success, never reveals
+// whether the email exists.
+export interface PasswordlessRequestResult {
+  success: boolean;
+  message: string;
+}
+
+// Optional payload aliases (documentation + exportability); the api methods take
+// the primitive directly like their siblings.
+export interface PasswordlessRequestPayload {
+  email: string;
+}
+
+export interface ConsumePasswordlessPayload {
+  token: string;
+}
+
+// Consume result: the logged-in user plus whether this consume created the
+// account (drives a first-run / onboarding branch in the consumer UI).
+export interface ConsumePasswordlessResult {
+  user: User;
+  is_new_user: boolean;
 }

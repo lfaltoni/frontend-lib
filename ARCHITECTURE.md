@@ -116,6 +116,10 @@ The initial client snapshot is seeded synchronously from `localStorage` (`authRe
 | `useRegister()` | `auth/useRegister.ts` | Registration form (delegates to `useLogin`) |
 | `useGoogleLogin()` | `auth/useGoogleLogin.ts` | Google Identity Services: `googleLogin(credential)` |
 | `usePasswordReset()` | `auth/usePasswordReset.ts` | Password reset flow: `requestReset()`, `confirmReset()` |
+| `useMagicLink()` | `auth/useMagicLink.ts` | Magic-link REQUEST step (login page): `request(email)`, `isSending`, `sent`, `error`, `reset()`. Enumeration-safe; no `useAuth` dependency |
+| `useConsumeMagicLink()` | `auth/useConsumeMagicLink.ts` | Magic-link CONSUME step (email callback page): `consume(token)`, `isConsuming`, `consumed`, `user`, `error`. Funnels into `useAuth().login` on success |
+| `useEmailSignIn()` | `auth/useEmailSignIn.ts` | Passwordless "consume-or-CREATE" REQUEST step (identifier-first page): `request(email)`, `isSending`, `sent`, `error`, `reset()`. Sibling of `useMagicLink` for the sign-in/sign-up flow (an unknown email becomes a sign-up); no `useAuth` dependency |
+| `useConsumePasswordless()` | `auth/useConsumePasswordless.ts` | Passwordless CONSUME step (email callback page): `consume(token)`, `isConsuming`, `consumed`, `isNewUser`, `user`, `error`. Sibling of `useConsumeMagicLink` that additionally exposes `isNewUser` (create-at-consume) so the callback can route a fresh sign-up into onboarding. Maps to backend `is_new_user` on the shared `LoginResponseSchema` (type-backend parity) |
 | `useUser()` | `account/useUser.ts` | User data: `loadUser()`, `updateUser()`, `clearUser()` |
 | `useProfile()` | `account/useProfile.ts` | Profile data + updates |
 | `useProfilePicture()` | `account/useProfilePicture.ts` | Avatar upload: `uploadProfilePicture()`, `handleFileSelect()` |

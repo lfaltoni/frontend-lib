@@ -8,3 +8,5 @@ export * from './useEmailVerification';
 export * from './useGoogleSignIn';
 export * from './useMagicLink';
 export * from './useConsumeMagicLink';
+export * from './useEmailSignIn';
+export * from './useConsumePasswordless';

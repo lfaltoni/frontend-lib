@@ -1,4 +1,11 @@
-import { LoginCredentials, MagicLinkRequestResult, RegisterData, User } from '../types/auth';
+import {
+  ConsumePasswordlessResult,
+  LoginCredentials,
+  MagicLinkRequestResult,
+  PasswordlessRequestResult,
+  RegisterData,
+  User,
+} from '../types/auth';
 import { getLogger } from '../utils/logging';
 import { foundationRequest } from './foundation-client';
 import { storage } from '../utils/storage';
@@ -12,6 +19,8 @@ interface AuthResponse<T = unknown> {
   user?: T;
   token?: string;
   error?: string;
+  // Passwordless consume only: true when the sign-in created a new account.
+  is_new_user?: boolean;
 }
 
 // Authentication API functions
@@ -164,5 +173,49 @@ export const authApi = {
 
     logger.info('Magic link consumed', { userId: response.user.user_id });
     return response.user;
+  },
+
+  requestPasswordless: async (email: string): Promise<PasswordlessRequestResult> => {
+    // Enumeration-safe: the backend always returns a generic success regardless
+    // of whether the email exists. The client does no special-casing. Mirrors
+    // requestMagicLink (body-ful POST { email }, message envelope). The backend
+    // will CREATE the account at consume time if the email is new.
+    logger.info('Requesting passwordless sign-in link', { email });
+
+    const response = await foundationRequest<PasswordlessRequestResult>('/api/auth/passwordless/request', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+
+    logger.info('Passwordless link requested');
+    return response;
+  },
+
+  consumePasswordless: async (token: string): Promise<ConsumePasswordlessResult> => {
+    // Consume the one-time token from the emailed link. On success the backend
+    // returns the SAME LoginResponse envelope as /login (user, token,
+    // is_first_login) PLUS is_new_user, and sets the cookie session. If the email
+    // was new the account was just created. Never log the raw token.
+    logger.info('Consuming passwordless link');
+
+    const response = await foundationRequest<AuthResponse<User>>('/api/auth/passwordless/consume', {
+      method: 'POST',
+      body: JSON.stringify({ token }),
+    });
+
+    if (!response.user) {
+      throw new Error('Invalid response: user data missing');
+    }
+
+    // Store JWT for cross-service auth (same handling as login/google/magic).
+    if (response.token) {
+      storage.setToken(response.token);
+    }
+
+    logger.info('Passwordless link consumed', {
+      userId: response.user.user_id,
+      isNewUser: response.is_new_user ?? false,
+    });
+    return { user: response.user, is_new_user: response.is_new_user ?? false };
   },
 };
